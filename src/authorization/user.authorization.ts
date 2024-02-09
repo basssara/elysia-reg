@@ -14,8 +14,13 @@ export function userAuthorization(app: Elysia) {
     .use(
       jwt({
         name: "jwt",
+        kid: String(process.env.JWT_KID),
         secret: String(process.env.JWT_SECRET!),
-        algorithm: "HS256",
+        sub: "auth",
+        schema: t.Object({
+          id: t.String(),
+          role: t.String(),
+        }),
       })
     )
     .use(cookie())
@@ -23,8 +28,8 @@ export function userAuthorization(app: Elysia) {
       "/signup",
       async ({ body, set, jwt, setCookie }): Promise<ResponseMessage> => {
         const { hash, salt } = await hashPassword(body.password);
+
         const emailIsExist = await User.findOne({ email: body.email });
-        const usernameIsExist = await User.findOne({ username: body.username });
 
         if (emailIsExist) {
           return new ApiResponse(set).response({
@@ -33,6 +38,8 @@ export function userAuthorization(app: Elysia) {
             message: "Email already occupied!",
           });
         }
+
+        const usernameIsExist = await User.findOne({ username: body.username });
 
         if (usernameIsExist) {
           return new ApiResponse(set).response({
@@ -55,16 +62,14 @@ export function userAuthorization(app: Elysia) {
         const user = await newUser.save();
 
         const accessToken = await jwt.sign({
-          username: user.username,
-          email: user.email,
+          id: user.id,
           role: user.role,
           iat: Math.floor(Date.now() / 1000) - 30,
           exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7 * 4,
         });
 
         const refreshToken = await jwt.sign({
-          username: user.username,
-          email: user.email,
+          id: user.id,
           role: user.role,
           iat: Math.floor(Date.now() / 1000) - 30,
           exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7 * 4 * 6,
@@ -119,16 +124,14 @@ export function userAuthorization(app: Elysia) {
         }
 
         const accessToken = await jwt.sign({
-          username: user.username,
-          email: user.email,
+          id: user.id,
           role: user.role,
           iat: Math.floor(Date.now() / 1000) - 30,
           exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7 * 4,
         });
 
         const refreshToken = await jwt.sign({
-          username: user.username,
-          email: user.email,
+          id: user.id,
           role: user.role,
           iat: Math.floor(Date.now() / 1000) - 30,
           exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7 * 4 * 6,
